@@ -59,7 +59,7 @@ model Account {
 
 model Role {
   id          String           @id @default(uuid())
-  name        String           @unique // 'PATIENT', 'DOCTOR', 'ADMIN'
+  name        role           @unique // 'PATIENT', 'DOCTOR', 'ADMIN'
   permissions RolePermission[]
   users       User[]
 
@@ -103,4 +103,10 @@ model Appointment {
   @@map("appointments")
 }
 
+
+enum role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
 
