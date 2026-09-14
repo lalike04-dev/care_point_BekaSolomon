@@ -26,3 +26,27 @@ export const loginschema=z.object({
 
 export type registrationSchema=z.infer<typeof registrationschema>["body"]
 export type loginSchema=z.infer<typeof loginschema>["body"]
+
+export const ACCESS_ISSUER = "carepoint-auth-api";
+export const ACCESS_AUDIENCE = "carepoint-api";
+
+export const verifiedAccessPayloadSchema = z.object({
+  sub: z.uuid(),
+  sid: z.uuid(),
+  role: z.enum(["PATIENT", "DOCTOR", "ADMIN"]),
+  iss: z.literal(ACCESS_ISSUER),
+  aud: z.union([
+    z.literal(ACCESS_AUDIENCE),
+    z.array(z.string()).refine((values) => values.includes(ACCESS_AUDIENCE)),
+  ]),
+  iat: z.number(),
+  exp: z.number(),
+  jti: z.uuid(),
+});
+
+export interface AuthPrincipal {
+  userId: string;
+  sessionId: string;
+  role: "PATIENT" | "ADMIN" | "DOCTOR";
+}
+
