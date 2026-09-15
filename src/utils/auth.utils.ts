@@ -9,6 +9,11 @@ import { randomUUID } from "node:crypto";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import {ACCESS_AUDIENCE,ACCESS_ISSUER,AuthPrincipal, verifiedAccessPayloadSchema} from "../schemas/auth.schema.js"
 
+
+const bcrypt_options={
+    saltRounds:12
+} as const 
+
 export const REFRESH_COOKIE_NAME = "refresh_token";
 export const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -56,10 +61,6 @@ export function equalDigest(candidate: string, stored: string): boolean {
 }
 
 
-
-const bcrypt_options={
-    saltRounds:12
-} as const 
 export async function hashPassword(password:string): Promise<string>{
     const hashed= await bcrypt.hash(password, bcrypt_options.saltRounds)
 
