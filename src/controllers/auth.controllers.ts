@@ -19,3 +19,16 @@ import {
   refreshCookieBaseOptions,
   refreshCookieOptions,
 } from "../utils/auth.utils.js";
+
+export async function Registrtion(req:Request,res:Response){
+    const { email, password }= req.body
+    const passwordhash= await hashPassword(password);
+
+    try{
+        const registered= await prisma.user.create({
+            data:{
+                
+            }
+        })
+    }
+}
