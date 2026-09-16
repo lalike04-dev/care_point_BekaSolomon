@@ -19,16 +19,34 @@ import {
   refreshCookieBaseOptions,
   refreshCookieOptions,
 } from "../utils/auth.utils.js";
+import { registration } from "../services/auth.services.js";
+
+export const safeUserSelect={
+id: true,
+email:true,
+name:true,
+phone:true,
+roleId:true,
+createdAt:true,
+updatedAt:true
+} satisfies Prisma.UserSelect
 
 export async function Registrtion(req:Request,res:Response){
-    const { email, password }= req.body
+    const { email, password, name, roleId }= req.body
     const passwordhash= await hashPassword(password);
 
     try{
-        const registered= await prisma.user.create({
-            data:{
-                
-            }
-        })
+        registration(email,passwordhash,name,roleId);
+        res.status(201).json({message:"User"})
+    }
+    catch(error){
+      if(error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"){
+        return res.status(409).json({
+        message: "An account with that email already exists",
+      })
+      }
+      throw error;
+      
     }
 }
