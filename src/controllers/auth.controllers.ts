@@ -21,6 +21,13 @@ import {
 } from "../utils/auth.utils.js";
 import { registration } from "../services/auth.services.js";
 
+
+type RefreshOutcome =
+  | { kind: "ok"; credential: string; expiresAt: Date; accessToken: string }
+  | { kind: "invalid" }
+  | { kind: "reused" }
+  | { kind: "conflict" };
+
 export const safeUserSelect={
 id: true,
 email:true,
@@ -123,4 +130,103 @@ export async function Login(req:Request,res:Response){
     },
   });
 }
+}
+
+
+export async function Refresh(req:Request,res:Response){
+  const parsed = parseRefreshCredential(
+    req.cookies?.[REFRESH_COOKIE_NAME],
+  );
+  if (!parsed) {
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+    return res.status(401).json({ message: "Refresh session required" });
+  }
+
+  const outcome: RefreshOutcome = await prisma.$transaction(async (tx) => {
+    const session = await tx.session.findUnique({
+      where: { id: parsed.sessionId },
+      include: { user: true },
+    });
+
+    const now = new Date();
+
+    if (
+      !session ||
+      session.revokedAt ||
+      session.expiresAt <= now
+    ) {
+      return { kind: "invalid" };
+    }
+
+    const candidateDigest = digestRefreshSecret(parsed.secret);
+
+    if (!equalDigest(candidateDigest, session.currentRefreshDigest)) {
+      await tx.session.updateMany({
+        where: { id: session.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+
+      return { kind: "reused" };
+    }
+
+    const nextSecret = createRefreshSecret();
+    const nextDigest = digestRefreshSecret(nextSecret);
+
+    const updated = await tx.session.updateMany({
+      where: {
+        id: session.id,
+        currentRefreshDigest: session.currentRefreshDigest,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      data: { currentRefreshDigest: nextDigest },
+    });
+
+    if (updated.count !== 1) {
+      return { kind: "conflict" };
+    }
+
+    const accessToken = signAccessToken({
+      userId: session.user.id,
+      sessionId: session.id,
+      role: session.user.role,
+    });
+
+    return {
+      kind: "ok",
+      credential: buildRefreshCredential(session.id, nextSecret),
+      expiresAt: session.expiresAt,
+      accessToken,
+    };
+  });
+
+  if (outcome.kind === "conflict") {
+    return res.status(409).json({
+      message: "Refresh already used; retry with the newest credential",
+    });
+  }
+
+  if (outcome.kind === "invalid" || outcome.kind === "reused") {
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+    return res.status(401).json({
+      message:
+        outcome.kind === "reused"
+          ? "Refresh credential reuse detected; session revoked"
+          : "Invalid or expired refresh session",
+    });
+  }
+
+  const remainingMs = Math.max(
+    0,
+    outcome.expiresAt.getTime() - Date.now(),
+  );
+
+  res.cookie(REFRESH_COOKIE_NAME, outcome.credential, {
+    ...refreshCookieOptions,
+    maxAge: remainingMs,
+  });
+
+  return res.status(200).json({
+    accessToken: outcome.accessToken,
+  });
 }

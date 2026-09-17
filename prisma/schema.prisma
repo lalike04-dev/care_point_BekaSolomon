@@ -59,12 +59,13 @@ model Account {
   @@map("accounts")
 }
 model Session {
-  id              String
+  id              String  @id @default(uuid())
   userid          String
   user            User @relation(fields: [userid], references: [id], onDelete: Cascade)
   currentRefreshDigest   String
   expiresAt       DateTime
-  @@id([id, userid])
+  revokedAt       DateTime?
+  @@unique([id, userid])
 }
 model Role {
   id          String           @id @default(uuid())
