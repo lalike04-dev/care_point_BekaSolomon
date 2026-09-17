@@ -42,6 +42,8 @@ model User {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  user_session       Session[]
+
   @@map("users")
 }
 
@@ -52,16 +54,17 @@ model Account {
   provider          String   // e.g., 'GOOGLE'
   providerAccountId String   // Google sub identifier
   createdAt         DateTime @default(now())
-  account_session   Account_Session[]
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
-model Account_Session {
-  id                String  @default(uuid())
-  accountid         String
-  Account           Account @relation(fields: [accountid], references: [id], onDelete: Cascade)
-  @@id([id, accountid])
+model Session {
+  id              String
+  userid          String
+  user            User @relation(fields: [userid], references: [id], onDelete: Cascade)
+  currentRefreshDigest   String
+  expiresAt       DateTime
+  @@id([id, userid])
 }
 model Role {
   id          String           @id @default(uuid())
