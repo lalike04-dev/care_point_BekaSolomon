@@ -142,7 +142,7 @@ export async function Refresh(req:Request,res:Response){
     return res.status(401).json({ message: "Refresh session required" });
   }
 
-  const outcome: RefreshOutcome = await prisma.$transaction(async (tx) => {
+  const outcome: RefreshOutcome = await prisma.$transaction(async (tx): Promise<RefreshOutcome>  => {
     const session = await tx.session.findUnique({
       where: { id: parsed.sessionId },
       include: { user: true },
@@ -185,11 +185,16 @@ export async function Refresh(req:Request,res:Response){
     if (updated.count !== 1) {
       return { kind: "conflict" };
     }
-
+    const rolematch=await prisma.role.findFirst({
+      where:{id:session.user.roleId}
+    })
+    if(!rolematch){
+      return { kind: "invalid"};
+    }
     const accessToken = signAccessToken({
       userId: session.user.id,
       sessionId: session.id,
-      role: session.user.role,
+      role: rolematch.name,
     });
 
     return {
@@ -229,4 +234,45 @@ export async function Refresh(req:Request,res:Response){
   return res.status(200).json({
     accessToken: outcome.accessToken,
   });
+}
+
+export async function logout(req: Request, res: Response) {
+  const parsed = parseRefreshCredential(
+    req.cookies?.[REFRESH_COOKIE_NAME],
+  );
+
+  if (parsed) {
+    const session = await prisma.session.findUnique({
+      where: { id: parsed.sessionId },
+    });
+
+    if (session && !session.revokedAt) {
+      const candidate = digestRefreshSecret(parsed.secret);
+
+      if (equalDigest(candidate, session.currentRefreshDigest)) {
+        await prisma.session.update({
+          where: { id: session.id },
+          data: { revokedAt: new Date() },
+        });
+      }
+    }
+  }
+
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+  return res.status(200).json({ message: "Logged out" });
+}
+
+export async function logoutAll(req: Request, res: Response) {
+  const principal = req.auth!;
+
+  await prisma.session.updateMany({
+    where: {
+      userId: principal.userId,
+      revokedAt: null,
+    },
+    data: { revokedAt: new Date() },
+  });
+
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+  return res.status(200).json({ message: "Logged out on all devices" });
 }
