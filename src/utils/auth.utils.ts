@@ -80,7 +80,7 @@ export function signAccessToken(principal: AuthPrincipal): string {
   return jwt.sign(
     {
       sid: principal.sessionId,
-      role: principal.role,
+      roleId: principal.roleId,
     },
     env.JWT_ACCESS_SECRET,
     {
@@ -114,6 +114,6 @@ export function verifyAccessToken(token: string): AuthPrincipal {
   return {
     userId: payload.sub,
     sessionId: payload.sid,
-    role: payload.role,
+    roleId: payload.roleId,
   };
 }

@@ -79,7 +79,7 @@ if(user.passwordHash){
   const principal = {
     userId: user.id,
     sessionId: session.id,
-    role: Matchrole.name,
+    roleId: Matchrole.id,
   };
 
   const accessToken = signAccessToken(principal);
@@ -147,7 +147,7 @@ export async function refresh(parsed:any){
     const accessToken = signAccessToken({
       userId: session.user.id,
       sessionId: session.id,
-      role: rolematch.name,
+      roleId: rolematch.id,
     });
 
     return {

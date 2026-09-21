@@ -1,9 +1,9 @@
-import type { AuthPrincipal } from "../utils/access-token";
+import type { AuthPrincipal } from "../schemas/auth.schema.ts";
 
 declare global {
   namespace Express {
     interface Request {
-      auth?: AuthPrincipal;
+      user?: AuthPrincipal;
     }
   }
 }

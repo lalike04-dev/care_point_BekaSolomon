@@ -7,7 +7,7 @@ export const passwordschema=z.string().min(8,"Enter atleast 8 chracters!").max(2
 
 export const nameschema=z.string().min(2).max(50)
 
-export const phoneschema=z.number().nonnegative("Phone cannot be a negative number!")
+export const phoneschema=z.number().nonnegative("Phone cannot be a negative number!").optional()
 
 export const roleidschema=z.enum(['1','2','3'])
 
@@ -33,7 +33,7 @@ export const ACCESS_AUDIENCE = "carepoint-api";
 export const verifiedAccessPayloadSchema = z.object({
   sub: z.uuid(),
   sid: z.uuid(),
-  role: z.enum(["PATIENT", "DOCTOR", "ADMIN"]),
+  roleId: z.string(),
   iss: z.literal(ACCESS_ISSUER),
   aud: z.union([
     z.literal(ACCESS_AUDIENCE),
@@ -47,6 +47,14 @@ export const verifiedAccessPayloadSchema = z.object({
 export interface AuthPrincipal {
   userId: string;
   sessionId: string;
-  role: "PATIENT" | "ADMIN" | "DOCTOR";
+  roleId: string;
 }
+
+export type Role="PATIENT"|"DOCTOR"|"ADMIN"
+export type Permission="appointment:delete_own"|
+"appointment:manage_own"|
+"appointment:read_own"|
+"appointment:update_own"|
+"appointment:read_all"|
+"appointment:create"
 
